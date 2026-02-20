@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creator Growth Radar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">📡</span>
+                <h1>Creator Growth Radar</h1>
+            </div>
+            <p class="tagline">Know who's about to blow up. Before everyone else does.</p>
+        </header>
+
+        <!-- Input Section -->
+        <section class="input-section">
+            <form id="analyze-form" class="analyze-form">
+                <div class="input-wrapper">
+                    <span class="input-prefix">@</span>
+                    <input 
+                        type="text" 
+                        id="username-input" 
+                        placeholder="tiktok username" 
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+                <button type="submit" id="analyze-btn" class="analyze-btn">
+                    <span class="btn-text">ANALYZE</span>
+                    <span class="btn-loader" style="display: none;">
+                        <span class="loader-dot"></span>
+                        <span class="loader-dot"></span>
+                        <span class="loader-dot"></span>
+                    </span>
+                </button>
+            </form>
+        </section>
+
+        <!-- Loading State -->
+        <section id="loading-section" class="loading-section" style="display: none;">
+            <div class="radar-container">
+                <svg class="radar-sweep" viewBox="0 0 200 200">
+                    <circle class="radar-ring" cx="100" cy="100" r="80" />
+                    <circle class="radar-ring" cx="100" cy="100" r="60" />
+                    <circle class="radar-ring" cx="100" cy="100" r="40" />
+                    <circle class="radar-ring" cx="100" cy="100" r="20" />
+                    <line class="radar-line" x1="100" y1="100" x2="100" y2="20" />
+                </svg>
+            </div>
+            <p class="loading-text">Scanning creator data...</p>
+        </section>
+
+        <!-- Error State -->
+        <section id="error-section" class="error-section" style="display: none;">
+            <div class="error-icon">⚠️</div>
+            <h3 class="error-title">Analysis Failed</h3>
+            <p id="error-message" class="error-message">Could not analyze this creator.</p>
+            <button onclick="resetApp()" class="retry-btn">Try Again</button>
+        </section>
+
+        <!-- Results Section -->
+        <section id="results-section" class="results-section" style="display: none;">
+            <!-- Creator Info -->
+            <div class="creator-info">
+                <h2 id="result-username" class="creator-username">@username</h2>
+                <div class="creator-meta">
+                    <span id="result-verified" class="verified-badge" style="display: none;">✓ Verified</span>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Followers</div>
+                    <div class="stat-value" id="stat-followers">0</div>
+                    <div class="stat-change positive" id="stat-change">+0 (24h)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Views</div>
+                    <div class="stat-value" id="stat-avg-views">0</div>
+                    <div class="stat-sub">last 10 posts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Engagement</div>
+                    <div class="stat-value" id="stat-engagement">0%</div>
+                    <div class="stat-sub">rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Posts/Week</div>
+                    <div class="stat-value" id="stat-frequency">0</div>
+                    <div class="stat-sub">frequency</div>
+                </div>
+            </div>
+
+            <!-- Score Cards -->
+            <div class="scores-container">
+                <!-- Growth Velocity -->
+                <div class="score-card" id="score-growth">
+                    <div class="score-header">
+                        <h3 class="score-title">Growth Velocity</h3>
+                        <div class="score-value" id="score-growth-value">0</div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="score-growth-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="score-label" id="score-growth-label">Analyzing...</div>
+                    <p class="score-desc">Measures momentum and follower growth trajectory.</p>
+                </div>
+
+                <!-- Viral Probability -->
+                <div class="score-card" id="score-viral">
+                    <div class="score-header">
+                        <h3 class="score-title">Viral Probability</h3>
+                        <div class="score-value" id="score-viral-value">0</div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="score-viral-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="score-label" id="score-viral-label">Analyzing...</div>
+                    <p class="score-desc">Likelihood of content reaching beyond current audience.</p>
+                </div>
+
+                <!-- Brand Deal Readiness -->
+                <div class="score-card" id="score-brand">
+                    <div class="score-header">
+                        <h3 class="score-title">Brand Deal Readiness</h3>
+                        <div class="score-value" id="score-brand-value">0</div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="score-brand-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="score-label" id="score-brand-label">Analyzing...</div>
+                    <p class="score-desc">Agency benchmark for sponsorship opportunities.</p>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <button onclick="resetApp()" class="new-search-btn">
+                <span>🔍</span> Analyze Another Creator
+            </button>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Creator Growth Radar © 2024</p>
+            <p class="footer-note">Data sourced from public TikTok profiles</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
