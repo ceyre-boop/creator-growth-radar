@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TABOOST — Creator Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:       #070707;
+  --surface:  #0f0f0f;
+  --surface2: #151515;
+  --surface3: #1c1c1c;
+  --red:      #ff1a1a;
+  --red-dim:  #cc0f0f;
+  --red-glow: rgba(255,26,26,0.15);
+  --green:    #00e676;
+  --text:     #f5f5f5;
+  --muted:    #555;
+  --border:   #1e1e1e;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline effect */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── HEADER ──────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: rgba(7,7,7,0.96);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+
+.logo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  color: var(--red);
+  text-shadow: 0 0 20px rgba(255,26,26,0.4);
+}
+
+.logo span { color: var(--text); }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.live-dot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+.live-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.add-btn {
+  background: var(--red);
+  border: none;
+  color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 0 16px rgba(255,26,26,0.25);
+}
+
+.add-btn:hover {
+  background: #ff3333;
+  box-shadow: 0 0 24px rgba(255,26,26,0.5);
+  transform: translateY(-1px);
+}
+
+/* API Status */
+.api-status {
+  font-size: 9px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+.api-status.connected { border-color: var(--green); color: var(--green); }
+.api-status.disconnected { border-color: var(--red); color: var(--red); }
+
+/* ── PORTFOLIO HEADER ────────────────────── */
+.portfolio-bar {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.portfolio-total-label {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.portfolio-total {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.portfolio-change {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.up { color: var(--green); }
+.down { color: var(--red); }
+
+.portfolio-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.pstat {
+  text-align: right;
+}
+
+.pstat-label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pstat-value {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* ── FILTER TABS ─────────────────────────── */
+.filter-row {
+  padding: 12px 24px;
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filter-row::-webkit-scrollbar { display: none; }
+
+.filter-tab {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  letter-spacing: 0.08em;
+}
+
+.filter-tab.active, .filter-tab:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-glow);
+}
+
+/* ── CREATOR TABLE ───────────────────────── */
+.table-header {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr 0.8fr;
+  padding: 10px 24px;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+
+.creator-row {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr 0.8fr;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.12s;
+  animation: rowIn 0.4s ease backwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.creator-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.creator-row:hover { background: var(--surface); }
+.creator-row:hover::before { background: var(--red); }
+
+.creator-row.trending::before { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.creator-row.hot::before { background: var(--red); box-shadow: 0 0 8px var(--red); animation: redFlicker 1.5s infinite; }
+
+@keyframes redFlicker {
+  0%,100% { opacity:1; }
+  50% { opacity:0.5; }
+}
+
+@keyframes rowIn {
+  from { opacity:0; transform: translateX(-12px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+.creator-row:nth-child(1) { animation-delay: 0.05s; }
+.creator-row:nth-child(2) { animation-delay: 0.1s; }
+.creator-row:nth-child(3) { animation-delay: 0.15s; }
+.creator-row:nth-child(4) { animation-delay: 0.2s; }
+.creator-row:nth-child(5) { animation-delay: 0.25s; }
+.creator-row:nth-child(6) { animation-delay: 0.3s; }
+
+/* Creator identity cell */
+.creator-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--border);
+  display: block;
+  background: var(--surface3);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  color: var(--muted);
+}
+
+.avatar-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  transition: border-color 0.3s;
+}
+
+.trending .avatar-ring { border-color: var(--green); box-shadow: 0 0 10px rgba(0,230,118,0.3); }
+.hot .avatar-ring { border-color: var(--red); box-shadow: 0 0 10px rgba(255,26,26,0.4); }
+
+.creator-name-wrap {}
+
+.creator-handle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.creator-name {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Sparkline */
+.sparkline-cell {
+  display: flex;
+  align-items: center;
+}
+
+.spark {
+  width: 80px;
+  height: 28px;
+}
+
+/* Metric cells */
+.metric {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+
+.metric-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 1px;
+  font-weight: 300;
+}
+
+.change-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.change-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* Score badge */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+  border: 1px solid;
+}
+
+.score-s { background: rgba(255,26,26,0.1); border-color: var(--red); color: var(--red); }
+.score-a { background: rgba(255,165,0,0.1); border-color: #ff9500; color: #ff9500; }
+.score-b { background: rgba(0,230,118,0.08); border-color: var(--green); color: var(--green); }
+.score-c { background: rgba(100,100,100,0.1); border-color: var(--muted); color: var(--muted); }
+
+/* ── DETAIL PANEL ─────────────────────────── */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.detail-overlay.open { opacity: 1; pointer-events: all; }
+
+.detail-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 360px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 201;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.detail-panel::-webkit-scrollbar { display: none; }
+.detail-panel.open { transform: translateX(0); }
+
+.detail-top {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.close-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover { border-color: var(--red); color: var(--red); }
+
+.detail-hero {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.detail-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--surface3);
+  border: 2px solid var(--red);
+  box-shadow: 0 0 16px rgba(255,26,26,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.detail-handle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.detail-name { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+.detail-metrics {
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dm-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.dm-label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.dm-value {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dm-value.red { color: var(--red); }
+.dm-value.green { color: var(--green); }
+
+/* Mini chart in detail */
+.detail-chart {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-chart-label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.chart-canvas-wrap {
+  position: relative;
+  height: 80px;
+}
+
+/* Score section in detail */
+.detail-scores {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.score-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.score-row:last-child { margin-bottom: 0; }
+
+.score-label { font-size: 11px; color: var(--muted); }
+
+.score-bar-wrap {
+  flex: 1;
+  margin: 0 12px;
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.score-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  width: 32px;
+  text-align: right;
+}
+
+/* Notes */
+.detail-notes {
+  padding: 20px 24px;
+}
+
+.notes-label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.notes-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 12px;
+  border-radius: 6px;
+  resize: none;
+  outline: none;
+  height: 80px;
+  transition: border-color 0.15s;
+  line-height: 1.6;
+}
+
+.notes-input:focus { border-color: var(--red); }
+.notes-input::placeholder { color: var(--muted); }
+
+.save-notes-btn {
+  margin-top: 10px;
+  background: var(--red);
+  border: none;
+  color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+}
+
+.save-notes-btn:hover { background: #ff3333; }
+
+/* ── ADD CREATOR MODAL ──────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  backdrop-filter: blur(6px);
+}
+
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--red);
+  border-radius: 8px;
+  padding: 28px;
+  width: 340px;
+  transform: translateY(20px) scale(0.97);
+  transition: transform 0.2s cubic-bezier(0.22,1,0.36,1);
+  box-shadow: 0 0 60px rgba(255,26,26,0.1);
+}
+
+.modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+.modal-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  margin-bottom: 20px;
+  color: var(--red);
+}
+
+.field { margin-bottom: 14px; }
+
+.field-label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.field-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.field-input:focus { border-color: var(--red); }
+.field-input::placeholder { color: var(--muted); }
+
+.modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+
+.modal-cancel {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modal-cancel:hover { border-color: var(--muted); color: var(--text); }
+
+.modal-submit {
+  flex: 2;
+  background: var(--red);
+  border: none;
+  color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 0 16px rgba(255,26,26,0.3);
+}
+
+.modal-submit:hover { background: #ff3333; box-shadow: 0 0 24px rgba(255,26,26,0.5); }
+
+/* ── EMPTY STATE ─────────────────────────── */
+.empty {
+  padding: 80px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.empty-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  color: var(--surface3);
+}
+
+.empty-sub { font-size: 11px; line-height: 1.6; }
+
+/* Loading state */
+.loading {
+  padding: 80px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--surface2);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Mobile responsive */
+@media (max-width: 700px) {
+  .table-header { display: none; }
+  .creator-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 4px 12px;
+    padding: 14px 16px;
+  }
+  .creator-row > *:not(.creator-id):not(.change-cell):not(.score-cell) { display: none; }
+  .score-cell { grid-row: 2; grid-column: 2; justify-self: end; }
+  .change-cell { grid-row: 2; }
+  .header { padding: 14px 16px; }
+  .portfolio-bar { padding: 16px; }
+  .filter-row { padding: 10px 16px; }
+  .detail-panel { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">TAB<span>OOST</span></div>
+  <div class="header-right">
+    <div class="live-dot">LIVE</div>
+    <span class="api-status disconnected" id="apiStatus">API</span>
+    <button class="add-btn" onclick="openModal()">+ CREATOR</button>
+  </div>
+</div>
+
+<!-- PORTFOLIO BAR -->
+<div class="portfolio-bar">
+  <div>
+    <div class="portfolio-total-label">Portfolio Reach · Total Followers</div>
+    <div class="portfolio-total" id="totalFollowers">—</div>
+    <div class="portfolio-change up" id="totalChange">—</div>
+  </div>
+  <div class="portfolio-stats">
+    <div class="pstat">
+      <div class="pstat-label">Creators</div>
+      <div class="pstat-value" id="creatorCount">—</div>
+    </div>
+    <div class="pstat">
+      <div class="pstat-label">Avg Eng.</div>
+      <div class="pstat-value" id="avgEngagement">—</div>
+    </div>
+    <div class="pstat">
+      <div class="pstat-label">Hot 🔴</div>
+      <div class="pstat-value" id="hotCount">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filter-row">
+  <button class="filter-tab active" onclick="filterCreators('all', this)">ALL</button>
+  <button class="filter-tab" onclick="filterCreators('hot', this)">🔴 HOT</button>
+  <button class="filter-tab" onclick="filterCreators('trending', this)">📈 TRENDING</button>
+  <button class="filter-tab" onclick="filterCreators('watch', this)">👁 WATCH</button>
+  <button class="filter-tab" onclick="sortCreators('followers', this)">FOLLOWERS ↕</button>
+  <button class="filter-tab" onclick="sortCreators('engagement', this)">ENGAGEMENT ↕</button>
+</div>
+
+<!-- TABLE HEADER -->
+<div class="table-header">
+  <div>CREATOR</div>
+  <div>7D TREND</div>
+  <div>FOLLOWERS</div>
+  <div>AVG VIEWS</div>
+  <div>ENG. RATE</div>
+  <div>SCORE</div>
+</div>
+
+<!-- CREATOR LIST -->
+<div id="creatorList">
+  <div class="loading">
+    <div class="loading-spinner"></div>
+    <div>Loading roster...</div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-top">
+    <div style="font-size:10px;color:var(--muted);letter-spacing:0.1em">CREATOR PROFILE</div>
+    <button class="close-btn" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="detail-hero">
+    <div class="detail-avatar" id="dAvatar"></div>
+    <div>
+      <div class="detail-handle" id="dHandle"></div>
+      <div class="detail-name" id="dName"></div>
+    </div>
+  </div>
+  <div class="detail-metrics">
+    <div class="dm-card">
+      <div class="dm-label">Followers</div>
+      <div class="dm-value" id="dFollowers"></div>
+    </div>
+    <div class="dm-card">
+      <div class="dm-label">Avg Views</div>
+      <div class="dm-value green" id="dAvgViews"></div>
+    </div>
+    <div class="dm-card">
+      <div class="dm-label">Engagement</div>
+      <div class="dm-value red" id="dEngagement"></div>
+    </div>
+    <div class="dm-card">
+      <div class="dm-label">Posts/Week</div>
+      <div class="dm-value" id="dPostFreq"></div>
+    </div>
+  </div>
+  <div class="detail-chart">
+    <div class="detail-chart-label">30-DAY FOLLOWER TREND</div>
+    <div class="chart-canvas-wrap">
+      <svg id="dChart" width="100%" height="80" viewBox="0 0 312 80" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+  <div class="detail-scores">
+    <div class="detail-chart-label" style="margin-bottom:16px">PERFORMANCE SCORES</div>
+    <div class="score-row">
+      <div class="score-label">Growth Velocity</div>
+      <div class="score-bar-wrap"><div class="score-bar-fill" id="dGrowthBar" style="background:var(--red)"></div></div>
+      <div class="score-num up" id="dGrowthScore"></div>
+    </div>
+    <div class="score-row">
+      <div class="score-label">Viral Probability</div>
+      <div class="score-bar-wrap"><div class="score-bar-fill" id="dViralBar" style="background:#ff9500"></div></div>
+      <div class="score-num" style="color:#ff9500" id="dViralScore"></div>
+    </div>
+    <div class="score-row">
+      <div class="score-label">Brand Readiness</div>
+      <div class="score-bar-wrap"><div class="score-bar-fill" id="dBrandBar" style="background:var(--green)"></div></div>
+      <div class="score-num up" id="dBrandScore"></div>
+    </div>
+  </div>
+  <div class="detail-notes">
+    <div class="notes-label">Manager Notes</div>
+    <textarea class="notes-input" id="dNotes" placeholder="Add notes about this creator..."></textarea>
+    <button class="save-notes-btn" onclick="saveNotes()">SAVE NOTES</button>
+  </div>
+</div>
+
+<!-- ADD CREATOR MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">ADD CREATOR</div>
+    <div class="field">
+      <label class="field-label">TikTok Handle</label>
+      <input class="field-input" id="mHandle" placeholder="@username" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="field-label">Legal Name</label>
+      <input class="field-input" id="mName" placeholder="Full name">
+    </div>
+    <div class="field">
+      <label class="field-label">Follower Count</label>
+      <input class="field-input" id="mFollowers" placeholder="e.g. 125000" type="number">
+    </div>
+    <div class="field">
+      <label class="field-label">Avg Views (last 10 posts)</label>
+      <input class="field-input" id="mViews" placeholder="e.g. 48000" type="number">
+    </div>
+    <div class="field">
+      <label class="field-label">Engagement Rate %</label>
+      <input class="field-input" id="mEng" placeholder="e.g. 6.4" type="number" step="0.1">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-submit" onclick="addCreator()">ADD TO ROSTER →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Config & API Layer -->
+<script src="config.js"></script>
+<script src="api.js"></script>
+
+<script>
+// ── State ───────────────────────────────────────────────────────
+let creators = [];
+let currentFilter = 'all';
+let openCreator = null;
+let backendConnected = false;
+
+// ── Helpers ────────────────────────────────────────────────────
+function fmt(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+  return n.toString();
+}
+
+function getScore(c) {
+  const growth = Math.min(100, Math.round(
+    (c.engagement * 4) + (c.avgViews / c.followers * 30) + (c.postsPerWeek * 3)
+  ));
+  const viral = Math.min(100, Math.round(
+    (c.avgViews / c.followers * 60) + (c.engagement * 2)
+  ));
+  const brand = Math.min(100, Math.round(
+    (Math.log10(c.followers) * 20) + (c.engagement * 3) + (c.postsPerWeek * 2)
+  ));
+  return { growth: Math.max(10, growth), viral: Math.max(10, viral), brand: Math.max(10, brand) };
+}
+
+function getScoreLetter(avg) {
+  if (avg >= 80) return 'S';
+  if (avg >= 65) return 'A';
+  if (avg >= 45) return 'B';
+  return 'C';
+}
+
+function getWeekChange(trend) {
+  if (!trend || trend.length < 2) return 0;
+  const diff = trend[trend.length-1] - trend[0];
+  return ((diff / trend[0]) * 100).toFixed(1);
+}
+
+function initials(handle) {
+  return handle.replace('@','').slice(0,2).toUpperCase();
+}
+
+// ── Sparkline SVG ──────────────────────────────────────────────
+function sparkline(data, color, w=80, h=28) {
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((v - min) / range) * h;
+    return `${x},${y}`;
+  });
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function detailChart(data, color) {
+  const w = 312, h = 80;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - 4 - ((v - min) / range) * (h - 8);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const firstX = 0, lastX = w;
+  const firstY = pts[0].split(',')[1];
+  const lastY = pts[pts.length-1].split(',')[1];
+  return `
+    <defs>
+      <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="M${pts.join(' L')} L${lastX},${h} L${firstX},${h} Z" fill="url(#grad)"/>
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${pts[pts.length-1].split(',')[0]}" cy="${lastY}" r="3" fill="${color}"/>`;
+}
+
+// ── Init ───────────────────────────────────────────────────────
+async function initApp() {
+  // Health check
+  try {
+    const health = await api.health();
+    backendConnected = health.status === 'ok' || health.status === 'healthy';
+    updateApiStatus(backendConnected);
+    console.log('[Init] Backend health:', health);
+  } catch (e) {
+    backendConnected = false;
+    updateApiStatus(false);
+    console.warn('[Init] Backend not available, using mock data');
+  }
+
+  // Load creators
+  await loadCreators();
+}
+
+function updateApiStatus(connected) {
+  const el = document.getElementById('apiStatus');
+  if (connected) {
+    el.textContent = 'API: Connected';
+    el.className = 'api-status connected';
+  } else {
+    el.textContent = 'API: Mock';
+    el.className = 'api-status disconnected';
+  }
+}
+
+async function loadCreators() {
+  try {
+    creators = await api.creators.list();
+    console.log('[Load] Creators:', creators.length, 'loaded');
+    render();
+  } catch (e) {
+    console.error('[Load] Failed to fetch creators:', e);
+    creators = [];
+    render();
+  }
+}
+
+// ── Render ─────────────────────────────────────────────────────
+function render() {
+  let list = [...creators];
+
+  if (currentFilter === 'hot') list = list.filter(c => c.status === 'hot');
+  else if (currentFilter === 'trending') list = list.filter(c => c.status === 'trending');
+  else if (currentFilter === 'watch') list = list.filter(c => c.status === 'watch');
+
+  // Portfolio stats
+  const totalF = creators.reduce((s,c) => s + c.followers, 0);
+  const avgEng = (creators.reduce((s,c) => s + c.engagement, 0) / (creators.length || 1)).toFixed(1);
+  const hot = creators.filter(c => c.status === 'hot').length;
+
+  document.getElementById('totalFollowers').textContent = fmt(totalF);
+  document.getElementById('totalChange').textContent = '▲ Portfolio growing';
+  document.getElementById('creatorCount').textContent = creators.length;
+  document.getElementById('avgEngagement').textContent = avgEng + '%';
+  document.getElementById('hotCount').textContent = hot;
+
+  const container = document.getElementById('creatorList');
+
+  if (list.length === 0) {
+    container.innerHTML = `<div class="empty">
+      <div class="empty-icon">📡</div>
+      <div class="empty-title">NO CREATORS HERE</div>
+      <div class="empty-sub">Add your first creator to start tracking.</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = list.map((c, i) => {
+    const scores = getScore(c);
+    const avg = Math.round((scores.growth + scores.viral + scores.brand) / 3);
+    const letter = getScoreLetter(avg);
+    const change = getWeekChange(c.trend);
+    const isUp = change >= 0;
+    const statusColor = c.status === 'hot' ? 'var(--red)' : c.status === 'trending' ? 'var(--green)' : 'var(--muted)';
+    const spark = sparkline(c.trend, statusColor);
+
+    return `<div class="creator-row ${c.status}" onclick="openDetail(${c.id})" style="animation-delay:${i*0.05}s">
+      <div class="creator-id">
+        <div class="avatar-wrap">
+          <div class="avatar">${initials(c.handle)}</div>
+          <div class="avatar-ring"></div>
+        </div>
+        <div class="creator-name-wrap">
+          <div class="creator-handle">${c.handle}</div>
+          <div class="creator-name">${c.name}</div>
+        </div>
+      </div>
+      <div class="sparkline-cell">${spark}</div>
+      <div>
+        <div class="metric">${fmt(c.followers)}</div>
+        <div class="metric-sub">followers</div>
+      </div>
+      <div>
+        <div class="metric">${fmt(c.avgViews)}</div>
+        <div class="metric-sub">avg views</div>
+      </div>
+      <div class="change-cell">
+        <div class="change-val ${isUp ? 'up' : 'down'}">${isUp?'▲':'▼'} ${Math.abs(change)}%</div>
+        <div class="metric-sub">${c.engagement}% eng</div>
+      </div>
+      <div class="score-cell">
+        <div class="score-badge score-${letter.toLowerCase()}">${letter}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Detail Panel ───────────────────────────────────────────────
+async function openDetail(id) {
+  const c = creators.find(x => x.id === id);
+  if (!c) return;
+  openCreator = c;
+
+  // Fetch live scores from API
+  try {
+    const scores = await api.creators.getScores(id);
+    c.scores = scores;
+  } catch (e) {
+    console.warn('[Scores] Using calculated scores');
+    c.scores = getScore(c);
+  }
+
+  const scores = c.scores || getScore(c);
+
+  document.getElementById('dAvatar').textContent = initials(c.handle);
+  document.getElementById('dHandle').textContent = c.handle;
+  document.getElementById('dName').textContent = c.name;
+  document.getElementById('dFollowers').textContent = fmt(c.followers);
+  document.getElementById('dAvgViews').textContent = fmt(c.avgViews);
+  document.getElementById('dEngagement').textContent = c.engagement + '%';
+  document.getElementById('dPostFreq').textContent = c.postsPerWeek + '/wk';
+  document.getElementById('dNotes').value = c.notes || '';
+
+  document.getElementById('dChart').innerHTML = detailChart(
+    c.trend,
+    c.status === 'hot' ? 'var(--red)' : 'var(--green)'
+  );
+
+  // Scores with animation delay
+  setTimeout(() => {
+    document.getElementById('dGrowthBar').style.width = scores.growth + '%';
+    document.getElementById('dViralBar').style.width = scores.viral + '%';
+    document.getElementById('dBrandBar').style.width = scores.brand + '%';
+  }, 100);
+
+  document.getElementById('dGrowthScore').textContent = scores.growth;
+  document.getElementById('dViralScore').textContent = scores.viral;
+  document.getElementById('dBrandScore').textContent = scores.brand;
+
+  document.getElementById('detailOverlay').classList.add('open');
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+async function closeDetail() {
+  if (openCreator) {
+    const notes = document.getElementById('dNotes').value;
+    if (notes !== openCreator.notes) {
+      // Save via API
+      try {
+        await api.creators.updateNotes(openCreator.id, notes);
+        openCreator.notes = notes;
+        console.log('[Notes] Saved');
+      } catch (e) {
+        console.error('[Notes] Failed to save:', e);
+      }
+    }
+  }
+  document.getElementById('detailOverlay').classList.remove('open');
+  document.getElementById('detailPanel').classList.remove('open');
+  openCreator = null;
+  document.getElementById('dGrowthBar').style.width = '0%';
+  document.getElementById('dViralBar').style.width = '0%';
+  document.getElementById('dBrandBar').style.width = '0%';
+}
+
+async function saveNotes() {
+  if (openCreator) {
+    const notes = document.getElementById('dNotes').value;
+    try {
+      await api.creators.updateNotes(openCreator.id, notes);
+      openCreator.notes = notes;
+      showToast('Notes saved ✓');
+    } catch (e) {
+      console.error('[Save Notes] Failed:', e);
+      showToast('Failed to save notes');
+    }
+  }
+}
+
+// ── Filter / Sort ──────────────────────────────────────────────
+function filterCreators(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function sortCreators(by, btn) {
+  if (by === 'followers') creators.sort((a,b) => b.followers - a.followers);
+  if (by === 'engagement') creators.sort((a,b) => b.engagement - a.engagement);
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+// ── Add Creator ────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('mHandle').focus(), 200);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  ['mHandle','mName','mFollowers','mViews','mEng'].forEach(id => document.getElementById(id).value = '');
+}
+
+async function addCreator() {
+  const handle = document.getElementById('mHandle').value.trim();
+  const name = document.getElementById('mName').value.trim();
+  const followers = parseInt(document.getElementById('mFollowers').value) || 0;
+  const avgViews = parseInt(document.getElementById('mViews').value) || 0;
+  const engagement = parseFloat(document.getElementById('mEng').value) || 0;
+
+  if (!handle || !followers) {
+    showToast('Handle and followers required');
+    return;
+  }
+
+  const creatorData = {
+    handle: handle.startsWith('@') ? handle : '@' + handle,
+    name: name || handle,
+    followers,
+    avgViews,
+    engagement,
+    postsPerWeek: 4
+  };
+
+  try {
+    const newCreator = await api.creators.create(creatorData);
+    if (newCreator) {
+      creators.unshift(newCreator);
+      closeModal();
+      render();
+      showToast('Creator added ✓');
+    }
+  } catch (e) {
+    console.error('[Add Creator] Failed:', e);
+    showToast('Failed to add creator');
+  }
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--red);
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 12px 24px;
+    border-radius: 50px;
+    z-index: 9999;
+    animation: slideUp 0.3s ease;
+  `;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+
+// ── Start ──────────────────────────────────────────────────────
+initApp();
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Database - DO NOT COMMIT
+taboost.db
+*.sqlite
+*.sqlite3
+
+# Environment - DO NOT COMMIT
+.env
+.env.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# IDE
+.vscode/
+.idea/
