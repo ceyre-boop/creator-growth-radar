@@ -4,9 +4,18 @@
  */
 
 // Configuration - Update this with your deployed backend URL
-const BACKEND_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8000' 
-    : 'https://creator-growth-radar-production.up.railway.app'; // Default, will be replaced on deploy
+// For Vercel deployment, this gets replaced during build
+let BACKEND_URL = 'https://creator-growth-radar-production.up.railway.app';
+
+// Check for environment override (set during deployment)
+if (typeof process !== 'undefined' && process.env.BACKEND_URL) {
+    BACKEND_URL = process.env.BACKEND_URL;
+}
+
+// Local development override
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    BACKEND_URL = 'http://localhost:8000';
+}
 
 // DOM Elements
 const form = document.getElementById('analyze-form');
@@ -104,6 +113,19 @@ function displayResults(data) {
     
     const verifiedBadge = document.getElementById('result-verified');
     verifiedBadge.style.display = data.verified ? 'inline-block' : 'none';
+    
+    // Demo mode indicator
+    const existingDemoBadge = document.getElementById('demo-badge');
+    if (existingDemoBadge) {
+        existingDemoBadge.remove();
+    }
+    if (data.demo_mode) {
+        const demoBadge = document.createElement('span');
+        demoBadge.id = 'demo-badge';
+        demoBadge.className = 'demo-badge';
+        demoBadge.textContent = '⚡ Demo Mode';
+        document.querySelector('.creator-meta').appendChild(demoBadge);
+    }
     
     // Stats
     document.getElementById('stat-followers').textContent = formatNumber(data.followers);

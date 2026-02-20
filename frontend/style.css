@@ -324,6 +324,17 @@ body {
     font-weight: 600;
 }
 
+.demo-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(255, 221, 0, 0.1);
+    color: var(--accent-yellow);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
 /* Stats Row */
 .stats-row {
     display: grid;

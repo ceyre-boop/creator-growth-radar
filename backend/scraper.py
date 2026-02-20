@@ -2,17 +2,22 @@
 TikTok Scraper Module
 Primary: RapidAPI TikTok Scraper (free tier)
 Fallback: Direct HTML scraping with rotating user agents
+Demo Mode: Deterministic fake data for reliable demos (no API dependency)
 """
 
 import httpx
 import os
 import random
+import hashlib
 from typing import Optional, Dict, Any
 from bs4 import BeautifulSoup
 
 # RapidAPI configuration
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
 RAPIDAPI_HOST = "tiktok-scraper7.p.rapidapi.com"
+
+# Demo mode flag - set to True for reliable demos without API dependency
+DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
 
 # Rotating user agents for fallback scraping
 USER_AGENTS = [
@@ -28,7 +33,13 @@ async def scrape_tiktok_profile(username: str) -> Optional[Dict[str, Any]]:
     """
     Scrape TikTok profile data.
     Tries RapidAPI first, falls back to direct HTML scraping.
+    If DEMO_MODE is enabled, returns deterministic fake data for reliable demos.
     """
+    # Demo mode - always return realistic fake data (deterministic based on username)
+    if DEMO_MODE:
+        print(f"Demo mode enabled for @{username}")
+        return generate_demo_profile_data(username)
+    
     # Try RapidAPI first
     if RAPIDAPI_KEY:
         try:
@@ -38,6 +49,47 @@ async def scrape_tiktok_profile(username: str) -> Optional[Dict[str, Any]]:
     
     # Fallback to direct scraping
     return await scrape_via_html(username)
+
+
+def generate_demo_profile_data(username: str) -> Dict[str, Any]:
+    """
+    Generate realistic demo data deterministically based on username.
+    Same username always returns same data for consistent demos.
+    """
+    # Create a hash from username for deterministic randomness
+    seed = int(hashlib.md5(username.lower().encode()).hexdigest()[:8], 16)
+    random.seed(seed)
+    
+    # Generate realistic follower counts (weighted toward micro/mid-tier creators)
+    follower_tiers = [
+        (1_000, 10_000, 0.3),      # 30% chance: micro creators
+        (10_000, 100_000, 0.35),   # 35% chance: growing creators
+        (100_000, 1_000_000, 0.25), # 25% chance: mid-tier
+        (1_000_000, 10_000_000, 0.08), # 8% chance: macro
+        (10_000_000, 50_000_000, 0.02), # 2% chance: mega
+    ]
+    
+    tier = random.choices(range(len(follower_tiers)), weights=[t[2] for t in follower_tiers])[0]
+    min_followers, max_followers, _ = follower_tiers[tier]
+    followers = random.randint(min_followers, max_followers)
+    
+    # Generate correlated metrics
+    total_likes = followers * random.randint(10, 150)  # Like-to-follower ratio
+    total_videos = random.randint(50, 500)
+    following = random.randint(50, 2000)
+    verified = followers > 500_000 and random.random() > 0.3  # 70% chance verified if >500K
+    
+    return {
+        "username": username,
+        "followers": followers,
+        "following": following,
+        "total_likes": total_likes,
+        "total_videos": total_videos,
+        "verified": verified,
+        "bio": f"Demo profile for @{username}",
+        "avatar": "",
+        "demo_mode": True,
+    }
 
 
 async def scrape_via_rapidapi(username: str) -> Optional[Dict[str, Any]]:
@@ -169,7 +221,11 @@ async def get_recent_posts_stats(username: str, limit: int = 10) -> Dict[str, An
     """
     Get stats from recent posts (avg views, engagement, posting frequency).
     This requires additional API calls to fetch post data.
+    In demo mode, returns deterministic realistic data.
     """
+    if DEMO_MODE:
+        return generate_demo_posts_data(username)
+    
     if not RAPIDAPI_KEY:
         return {
             "avg_views": 0,
@@ -255,3 +311,27 @@ async def get_recent_posts_stats(username: str, limit: int = 10) -> Dict[str, An
             "avg_shares": 0,
             "posting_frequency_per_week": 0,
         }
+
+
+def generate_demo_posts_data(username: str) -> Dict[str, Any]:
+    """
+    Generate realistic demo post stats deterministically based on username.
+    """
+    seed = int(hashlib.md5(username.lower().encode()).hexdigest()[:8], 16)
+    random.seed(seed + 1)  # Different seed from profile data
+    
+    # Generate correlated post metrics
+    avg_views = random.randint(5000, 500000)
+    avg_likes = int(avg_views * random.uniform(0.05, 0.15))  # 5-15% like rate
+    avg_comments = int(avg_likes * random.uniform(0.01, 0.05))  # 1-5% comment rate
+    avg_shares = int(avg_likes * random.uniform(0.02, 0.1))  # 2-10% share rate
+    posting_frequency = round(random.uniform(0.5, 7.0), 1)  # 0.5 to 7 posts per week
+    
+    return {
+        "avg_views": avg_views,
+        "avg_likes": avg_likes,
+        "avg_comments": avg_comments,
+        "avg_shares": avg_shares,
+        "posting_frequency_per_week": posting_frequency,
+        "demo_mode": True,
+    }
