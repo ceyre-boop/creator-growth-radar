@@ -3,20 +3,187 @@ import sqlite3
 import json
 import os
 import uuid
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 from typing import Optional, List
 from contextlib import contextmanager
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 import csv
 import io
 from dotenv import load_dotenv
+import httpx
 
 # ── ENV & CONFIG ───────────────────────────────────────────────
 load_dotenv()
 API_KEY = os.getenv("TABOOST_API_KEY", "dev-key-change-in-production")
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
 DB_PATH = os.path.join(os.path.dirname(__file__), "taboost.db")
+
+# ── TIKTOK SCRAPER ─────────────────────────────────────────────
+RAPIDAPI_HOST = "tiktok-scraper7.p.rapidapi.com"
+
+# Cache for rate limiting: {username: (timestamp, data)}
+_tiktok_cache = {}
+CACHE_TTL = 1800  # 30 minutes
+
+def get_cached_or_fetch(username: str, fetch_fn):
+    """Get cached TikTok data or fetch fresh."""
+    now = time.time()
+    if username in _tiktok_cache:
+        ts, data = _tiktok_cache[username]
+        if now - ts < CACHE_TTL:
+            return data
+    data = None  # Will be set by caller
+    _tiktok_cache[username] = (now, data)
+    return data
+
+def set_cache(username: str, data: dict):
+    """Set cached TikTok data."""
+    _tiktok_cache[username] = (time.time(), data)
+
+async def fetch_tiktok_user_videos(username: str, count: int = 10) -> dict:
+    """Fetch user's recent videos from TikTok."""
+    clean = username.lstrip("@")
+    url = f"https://{RAPIDAPI_HOST}/user/posts"
+    headers = {
+        "X-RapidAPI-Key": RAPIDAPI_KEY,
+        "X-RapidAPI-Host": RAPIDAPI_HOST
+    }
+    params = {"unique_id": clean, "count": count}
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, headers=headers, params=params, timeout=15)
+        r.raise_for_status()
+        return r.json()
+
+async def fetch_tiktok_user_info(username: str) -> dict:
+    """Fetch user profile info from TikTok."""
+    clean = username.lstrip("@")
+    url = f"https://{RAPIDAPI_HOST}/user/info"
+    headers = {
+        "X-RapidAPI-Key": RAPIDAPI_KEY,
+        "X-RapidAPI-Host": RAPIDAPI_HOST
+    }
+    params = {"unique_id": clean}
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, headers=headers, params=params, timeout=15)
+        r.raise_for_status()
+        return r.json()
+
+def parse_tiktok_stats(videos_response: dict, user_info_response: dict) -> dict:
+    """Parse TikTok API responses into normalized stats."""
+    # Extract user info
+    user_info = user_info.get("user", {}) or user_info.get("data", {}).get("user", {})
+    videos = videos_response.get("videos", []) or videos_response.get("data", {}).get("videos", [])
+    
+    handle = user_info.get("unique_id", "")
+    if not handle:
+        # Fallback: try to get from videos
+        if videos and len(videos) > 0:
+            author = videos[0].get("author", {})
+            handle = author.get("unique_id", "")
+    
+    nickname = user_info.get("nickname", "") or handle
+    avatar = user_info.get("avatar", "") or user_info.get("avatarMedium", "") or user_info.get("avatarLarger", "")
+    followers = int(user_info.get("followerCount", 0) or user_info.get("followers", 0) or 0)
+    following = int(user_info.get("followingCount", 0) or user_info.get("following", 0) or 0)
+    total_likes = int(user_info.get("heartCount", 0) or user_info.get("totalLikes", 0) or 0)
+    
+    # Calculate averages from videos
+    if videos:
+        play_counts = [int(v.get("playCount", 0) or v.get("play_count", 0) or 0) for v in videos]
+        digg_counts = [int(v.get("diggCount", 0) or v.get("digg_count", 0) or 0) for v in videos]
+        comment_counts = [int(v.get("commentCount", 0) or v.get("comment_count", 0) or 0) for v in videos]
+        share_counts = [int(v.get("shareCount", 0) or v.get("share_count", 0) or 0) for v in videos]
+        create_times = [int(v.get("createTime", 0) or v.get("create_time", 0) or 0) for v in videos]
+        
+        avg_views = round(sum(play_counts) / len(play_counts)) if play_counts else 0
+        avg_likes = round(sum(digg_counts) / len(digg_counts)) if digg_counts else 0
+        avg_comments = round(sum(comment_counts) / len(comment_counts)) if comment_counts else 0
+        avg_shares = round(sum(share_counts) / len(share_counts)) if share_counts else 0
+        
+        # Posts per week calculation
+        posts_per_week = 4.0  # default
+        if len(create_times) >= 2:
+            oldest = min(create_times)
+            newest = max(create_times)
+            days_span = max(1, (newest - oldest) / 86400)
+            weeks_span = days_span / 7
+            posts_per_week = round(len(videos) / max(weeks_span, 0.1), 1)
+        
+        # Engagement rate
+        if followers > 0:
+            engagement_rate = round((avg_likes + avg_comments + avg_shares) / followers * 100, 2)
+        else:
+            engagement_rate = 0
+    else:
+        avg_views = 0
+        avg_likes = 0
+        avg_comments = 0
+        avg_shares = 0
+        posts_per_week = 0
+        engagement_rate = 0
+    
+    return {
+        "handle": f"@{handle}" if handle and not handle.startswith("@") else handle,
+        "nickname": nickname,
+        "avatar": avatar,
+        "followers": followers,
+        "following": following,
+        "total_likes": total_likes,
+        "avg_views": avg_views,
+        "avg_likes": avg_likes,
+        "avg_comments": avg_comments,
+        "avg_shares": avg_shares,
+        "engagement_rate": min(100, engagement_rate),
+        "posts_per_week": posts_per_week,
+        "video_count_analyzed": len(videos)
+    }
+
+def compute_scores(stats: dict) -> dict:
+    """Compute growth, viral, and brand scores from real stats."""
+    followers = stats.get("followers", 0)
+    avg_views = stats.get("avg_views", 0)
+    engagement = stats.get("engagement_rate", 0)
+    posts_per_week = stats.get("posts_per_week", 4)
+    avg_shares = stats.get("avg_shares", 0)
+    
+    # Growth Velocity: rewards high posting freq + strong engagement + view momentum
+    growth = min(100, round(
+        (engagement * 4) + 
+        (avg_views / max(followers, 1) * 40) + 
+        (posts_per_week * 4)
+    ))
+    
+    # Viral Probability: views vs followers ratio is the key signal
+    view_ratio = avg_views / max(followers, 1)
+    viral = min(100, round(
+        (view_ratio * 60) + 
+        (engagement * 2.5) + 
+        (avg_shares / max(avg_views, 1) * 200)
+    ))
+    
+    # Brand Readiness: follower threshold + engagement quality + consistency
+    follower_score = min(40, (len(str(int(followers))) - 3) * 10) if followers > 0 else 0
+    brand = min(100, round(
+        follower_score + 
+        (engagement * 3.5) + 
+        (posts_per_week * 3) + 
+        (10 if followers >= 10000 else 0) + 
+        (10 if followers >= 100000 else 0)
+    ))
+    
+    avg = round((growth + viral + brand) / 3)
+    letter = "S" if avg >= 80 else "A" if avg >= 65 else "B" if avg >= 45 else "C"
+    
+    return {
+        "growth_velocity": max(5, growth),
+        "viral_probability": max(5, viral),
+        "brand_readiness": max(5, brand),
+        "overall": avg,
+        "grade": letter
+    }
 
 # ── APP SETUP ──────────────────────────────────────────────────
 app = FastAPI(
@@ -169,6 +336,36 @@ async def health_check():
     """Health check - no auth required."""
     return {"status": "ok", "service": "taboost-api"}
 
+@app.get("/analyze")
+async def analyze_creator(username: str = Query(..., description="TikTok username (with or without @)")):
+    """Analyze a TikTok creator and return real scores (no auth required for testing)."""
+    if not RAPIDAPI_KEY:
+        return {
+            "error": "RAPIDAPI_KEY not configured",
+            "hint": "Set RAPIDAPI_KEY in .env file"
+        }
+    
+    try:
+        videos_response = await fetch_tiktok_user_videos(username)
+        user_info_response = await fetch_tiktok_user_info(username)
+        
+        stats = parse_tiktok_stats(videos_response, user_info_response)
+        scores = compute_scores(stats)
+        
+        return {
+            "success": True,
+            "username": username,
+            "stats": stats,
+            "scores": scores,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "username": username,
+            "error": str(e)
+        }
+
 # ── STATS ENDPOINT ─────────────────────────────────────────────
 @app.get("/api/stats")
 async def get_stats(api_key: str = Depends(verify_api_key)):
@@ -298,21 +495,104 @@ async def update_creator_notes(creator_id: str, notes_data: dict, api_key: str =
         return creator
 
 @app.get("/api/creators/{creator_id}/scores")
-async def get_creator_scores(creator_id: str, api_key: str = Depends(verify_api_key)):
-    """Get performance scores for a creator."""
+async def get_creator_scores(creator_id: str, api_key: str = Depends(verify_api_key), refresh: bool = Query(False)):
+    """Get performance scores for a creator (with real TikTok data)."""
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM scores WHERE creator_id = ?", (creator_id,))
-        row = cursor.fetchone()
         
-        if not row:
-            return {"growth": 50, "viral": 50, "brand": 50}
+        # Get creator info
+        cursor.execute("SELECT * FROM creators WHERE id = ?", (creator_id,))
+        creator_row = cursor.fetchone()
         
-        return {
-            "growth": row["growth_velocity"],
-            "viral": row["viral_probability"],
-            "brand": row["brand_readiness"]
-        }
+        if not creator_row:
+            raise HTTPException(status_code=404, detail="Creator not found")
+        
+        creator = dict(creator_row)
+        handle = creator["handle"].lstrip("@")
+        
+        # Check cache first (unless refresh requested)
+        cached = _tiktok_cache.get(handle)
+        if cached and not refresh:
+            ts, stats = cached
+            if time.time() - ts < CACHE_TTL:
+                scores = compute_scores(stats)
+                return {
+                    **scores,
+                    "stats": stats,
+                    "cached": True,
+                    "cacheAge": round(time.time() - ts)
+                }
+        
+        # Fetch real TikTok data
+        if not RAPIDAPI_KEY:
+            # Fallback to stored data if no API key
+            cursor.execute("SELECT * FROM scores WHERE creator_id = ?", (creator_id,))
+            row = cursor.fetchone()
+            if row:
+                return {
+                    "growth_velocity": row["growth_velocity"],
+                    "viral_probability": row["viral_probability"],
+                    "brand_readiness": row["brand_readiness"],
+                    "overall": round((row["growth_velocity"] + row["viral_probability"] + row["brand_readiness"]) / 3),
+                    "cached": False,
+                    "note": "No RAPIDAPI_KEY configured - using stored scores"
+                }
+            return {"growth_velocity": 50, "viral_probability": 50, "brand_readiness": 50, "overall": 50}
+        
+        try:
+            videos_response = await fetch_tiktok_user_videos(handle)
+            user_info_response = await fetch_tiktok_user_info(handle)
+            
+            stats = parse_tiktok_stats(videos_response, user_info_response)
+            scores = compute_scores(stats)
+            
+            # Cache the result
+            set_cache(handle, stats)
+            
+            # Update creator in DB with fresh data
+            cursor.execute("""
+                UPDATE creators SET 
+                    followers = ?, avg_views = ?, engagement = ?, posts_per_week = ?,
+                    trend = ?, notes = ?
+                WHERE id = ?
+            """, (
+                stats["followers"],
+                stats["avg_views"],
+                stats["engagement_rate"],
+                stats["posts_per_week"],
+                json.dumps(stats.get("trend", [stats["followers"]] * 7)),
+                f"Auto-updated from TikTok • {stats['video_count_analyzed']} videos analyzed",
+                creator_id
+            ))
+            
+            # Update or insert scores
+            cursor.execute("""
+                INSERT OR REPLACE INTO scores (creator_id, growth_velocity, viral_probability, brand_readiness, updated_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (creator_id, scores["growth_velocity"], scores["viral_probability"], scores["brand_readiness"]))
+            
+            conn.commit()
+            
+            return {
+                **scores,
+                "stats": stats,
+                "cached": False,
+                "source": "tiktok_api"
+            }
+        except Exception as e:
+            # Fallback to stored scores on API error
+            cursor.execute("SELECT * FROM scores WHERE creator_id = ?", (creator_id,))
+            row = cursor.fetchone()
+            if row:
+                return {
+                    "growth_velocity": row["growth_velocity"],
+                    "viral_probability": row["viral_probability"],
+                    "brand_readiness": row["brand_readiness"],
+                    "overall": round((row["growth_velocity"] + row["viral_probability"] + row["brand_readiness"]) / 3),
+                    "error": str(e),
+                    "fallback": True
+                }
+            raise HTTPException(status_code=500, detail=f"TikTok API error: {str(e)}")
 
 # ── EARNINGS ENDPOINTS ─────────────────────────────────────────
 
