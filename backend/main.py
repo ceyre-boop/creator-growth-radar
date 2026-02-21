@@ -72,31 +72,64 @@ async def fetch_tiktok_user_info(username: str) -> dict:
         return r.json()
 
 def parse_tiktok_stats(videos_response: dict, user_info_response: dict) -> dict:
-    """Parse TikTok API responses into normalized stats."""
-    # Extract user info
-    user_info = user_info.get("user", {}) or user_info.get("data", {}).get("user", {})
-    videos = videos_response.get("videos", []) or videos_response.get("data", {}).get("videos", [])
+    """Parse TikTok API responses into normalized stats.
     
-    handle = user_info.get("unique_id", "")
-    if not handle:
-        # Fallback: try to get from videos
-        if videos and len(videos) > 0:
-            author = videos[0].get("author", {})
-            handle = author.get("unique_id", "")
+    Expected API structure:
+    {
+      "code": 0,
+      "data": {
+        "videos": [{
+          "aweme_id": "...",
+          "play_count": 123456,
+          "digg_count": 5678,
+          "comment_count": 123,
+          "share_count": 45,
+          "create_time": 1234567890,
+          "author": {
+            "unique_id": "username",
+            "nickname": "Display Name",
+            "avatar": "https://..."
+          }
+        }]
+      }
+    }
+    """
+    # Handle both response formats
+    if videos_response.get("code") == 0:
+        videos_data = videos_response.get("data", {})
+        videos = videos_data.get("videos", [])
+    else:
+        videos = videos_response.get("videos", []) or videos_response.get("data", {}).get("videos", [])
     
-    nickname = user_info.get("nickname", "") or handle
+    if user_info_response.get("code") == 0:
+        user_data = user_info_response.get("data", {})
+        user_info = user_data.get("user", {}) or user_data.get("userInfo", {})
+    else:
+        user_info = user_info_response.get("user", {}) or user_info_response.get("data", {}).get("user", {})
+    
+    # Extract user info - handle multiple API response formats
+    handle = user_info.get("unique_id", "") or user_info.get("id", "")
+    if not handle and videos and len(videos) > 0:
+        author = videos[0].get("author", {})
+        handle = author.get("unique_id", "") or author.get("id", "")
+    
+    nickname = user_info.get("nickname", "") or (videos[0].get("author", {}).get("nickname", "")) if videos else handle
     avatar = user_info.get("avatar", "") or user_info.get("avatarMedium", "") or user_info.get("avatarLarger", "")
-    followers = int(user_info.get("followerCount", 0) or user_info.get("followers", 0) or 0)
+    if not avatar and videos and len(videos) > 0:
+        avatar = videos[0].get("author", {}).get("avatar", "")
+    
+    followers = int(user_info.get("followerCount", 0) or user_info.get("followers", 0) or user_info.get("fanCount", 0) or 0)
     following = int(user_info.get("followingCount", 0) or user_info.get("following", 0) or 0)
-    total_likes = int(user_info.get("heartCount", 0) or user_info.get("totalLikes", 0) or 0)
+    total_likes = int(user_info.get("heartCount", 0) or user_info.get("totalLikes", 0) or user_info.get("heart", 0) or 0)
     
     # Calculate averages from videos
     if videos:
-        play_counts = [int(v.get("playCount", 0) or v.get("play_count", 0) or 0) for v in videos]
-        digg_counts = [int(v.get("diggCount", 0) or v.get("digg_count", 0) or 0) for v in videos]
-        comment_counts = [int(v.get("commentCount", 0) or v.get("comment_count", 0) or 0) for v in videos]
-        share_counts = [int(v.get("shareCount", 0) or v.get("share_count", 0) or 0) for v in videos]
-        create_times = [int(v.get("createTime", 0) or v.get("create_time", 0) or 0) for v in videos]
+        # Handle both camelCase and snake_case field names
+        play_counts = [int(v.get("play_count", 0) or v.get("playCount", 0) or 0) for v in videos]
+        digg_counts = [int(v.get("digg_count", 0) or v.get("diggCount", 0) or 0) for v in videos]
+        comment_counts = [int(v.get("comment_count", 0) or v.get("commentCount", 0) or 0) for v in videos]
+        share_counts = [int(v.get("share_count", 0) or v.get("shareCount", 0) or 0) for v in videos]
+        create_times = [int(v.get("create_time", 0) or v.get("createTime", 0) or 0) for v in videos]
         
         avg_views = round(sum(play_counts) / len(play_counts)) if play_counts else 0
         avg_likes = round(sum(digg_counts) / len(digg_counts)) if digg_counts else 0
